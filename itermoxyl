@@ -118,18 +118,15 @@ def load_hosts():
 
 
 def check_if_iterm_version_is_supported():
-    osa = subprocess.Popen(['osascript', '-'],
-                           stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE,
-                           universal_newlines=True)
-
+    process = subprocess.Popen(
+        ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        universal_newlines=True
+    )
     version_script = 'set iterm_version to (get version of application "iTerm")'
-    version = str(osa.communicate(version_script)[0]).strip()
-
+    version = process.communicate(version_script)[0].strip()
     match = re.search(r"^(\d+)\.(\d+)", version)
     if match:
-        major = int(match.group(1))
-        minor = int(match.group(2))
+        major, minor = int(match.group(1)), int(match.group(2))
         return (major > 2) or (major == 2 and minor > 9)
     return False
 
@@ -158,23 +155,21 @@ def init_pane(number, host):
         """.format(number=number, host=host)
 
 
-def prepare_and_run_applescript(selected_hosts):
-    num_panes = len(selected_hosts)
-    vertical_splits = int(ceil((num_panes / 2.0))) - 1
-    second_columns = num_panes // 2
+def prepare_and_run_applescript(hosts):
+    n = len(hosts)
+    vertical_splits = int(ceil(n / 2.0)) - 1
+    second_columns = n // 2
     pane_creation = ""
 
-    for p in range(0, vertical_splits):
-        parent = (p * 2) + 1
-        child = parent + 2
-        pane_creation += create_pane(parent, child, "horizontal")
+    for i in range(vertical_splits):
+        p = i * 2 + 1
+        pane_creation += create_pane(p, p + 2, "horizontal")
 
-    for p in range(0, second_columns):
-        parent = (p * 2) + 1
-        child = parent + 1
-        pane_creation += create_pane(parent, child, "vertical")
+    for i in range(second_columns):
+        p = i * 2 + 1
+        pane_creation += create_pane(p, p + 1, "vertical")
 
-    pane_initialization = ''.join(init_pane(i + 1, h) for i, h in enumerate(selected_hosts))
+    init_script = ''.join(init_pane(i + 1, h) for i, h in enumerate(hosts))
 
     script = """
         tell application "iTerm"
@@ -184,21 +179,21 @@ def prepare_and_run_applescript(selected_hosts):
                 tell new_tab
                     set pane_1 to current session
                     {pane_creation}
-                    {pane_initialization}
+                    {init_script}
                 end tell
             end tell
         end tell
-        """.format(pane_creation=pane_creation, pane_initialization=pane_initialization)
+        """.format(pane_creation=pane_creation, init_script=init_script)
 
     if arguments.debug:
         print(script)
         sys.exit(0)
 
-    osa = subprocess.Popen(['osascript', '-'],
-                           stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE,
-                           universal_newlines=True)
-    output = osa.communicate(script)[0]
+    process = subprocess.Popen(
+        ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        universal_newlines=True
+    )
+    output = process.communicate(script)[0]
     if output:
         print(output)
 
