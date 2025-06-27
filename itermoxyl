@@ -56,7 +56,7 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 if arguments.version:
-    print("{}.{}.{}".format(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH))
+    print(f"{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}")
     sys.exit(0)
 
 if not arguments.mode:
@@ -109,7 +109,7 @@ def load_hosts():
     config = load_ssh_config()
     combined = known.union(config)
     if not combined:
-        print("No hosts found in {}known_hosts or {}config".format(CONFIG_PATH, CONFIG_PATH))
+        print(f"No hosts found in {CONFIG_PATH}known_hosts or {CONFIG_PATH}config")
         sys.exit(1)
     return combined
 
@@ -129,27 +129,25 @@ def check_if_iterm_version_is_supported():
 
 
 def prompt_for_confirmation(hosts_count):
-    print("\nNumber of panes to open: {}".format(hosts_count))
-    sys.stdout.write("Press 'y' to continue (or any other key to abort): ")
-    choice = input().strip().lower()
-    return choice == "y"
+    choice = input(f"\nOpen {hosts_count} panes? [y/N] ").strip().lower()
+    return choice == 'y'
 
 
 def create_pane(parent, child, orientation):
-    return """
+    return f"""
         tell pane_{parent}
             set pane_{child} to (split {orientation}ly with same profile)
         end tell
-        """.format(parent=parent, child=child, orientation=orientation)
+        """
 
 
 def init_pane(number, host):
-    return """
+    return f"""
         tell pane_{number}
             write text "ssh {host}"
             set name to "{host}"
         end tell
-        """.format(number=number, host=host)
+        """
 
 
 def prepare_and_run_applescript(hosts):
@@ -168,7 +166,7 @@ def prepare_and_run_applescript(hosts):
 
     init_script = ''.join(init_pane(i + 1, h) for i, h in enumerate(hosts))
 
-    script = """
+    script = f"""
         tell application "iTerm"
             activate
             tell current window
@@ -180,7 +178,7 @@ def prepare_and_run_applescript(hosts):
                 end tell
             end tell
         end tell
-        """.format(pane_creation=pane_creation, init_script=init_script)
+        """
 
     if arguments.debug:
         print(script)
@@ -220,7 +218,7 @@ def main():
         if not arguments.hosts:
             parser.error("At least one regex pattern is required for --find mode.")
 
-        loose_search = ".*?".join(["(?:{})".format(p) for p in arguments.hosts])
+        loose_search = ".*?".join([f"(?:{p})" for p in arguments.hosts])
         pat = re.compile(loose_search, re.IGNORECASE)
         available_hosts = load_hosts()
 
@@ -234,7 +232,7 @@ def main():
 
     print("Will open the following terminal panes:\n")
     for host in selected_hosts:
-        print("- {}".format(host))
+        print(f"- {host}")
 
     if arguments.should_actually_run or prompt_for_confirmation(len(selected_hosts)):
         prepare_and_run_applescript(selected_hosts)
