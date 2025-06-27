@@ -174,10 +174,7 @@ def prepare_and_run_applescript(selected_hosts):
         child = parent + 1
         pane_creation += create_pane(parent, child, "vertical")
 
-    pane_initialization = ""
-
-    for i in range(0, num_panes):
-        pane_initialization += init_pane(i + 1, selected_hosts[i])
+    pane_initialization = ''.join(init_pane(i + 1, h) for i, h in enumerate(selected_hosts))
 
     script = """
         tell application "iTerm"
