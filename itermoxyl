@@ -130,7 +130,7 @@ def check_if_iterm_version_is_supported():
     if match:
         major = int(match.group(1))
         minor = int(match.group(2))
-        return (major > 2) or (major == 2 and minor > 9)  # support only if greater than 2.9
+        return (major > 2) or (major == 2 and minor > 9)
     return False
 
 
@@ -183,13 +183,13 @@ def prepare_and_run_applescript(selected_hosts):
         tell application "iTerm"
             activate
             tell current window
-                create tab with default profile
+                set new_tab to (create tab with default profile)
+                tell new_tab
+                    set pane_1 to current session
+                    {pane_creation}
+                    {pane_initialization}
+                end tell
             end tell
-
-            set pane_1 to (current session of current window)
-
-            {pane_creation}
-            {pane_initialization}
         end tell
         """.format(pane_creation=pane_creation, pane_initialization=pane_initialization)
 
@@ -202,7 +202,8 @@ def prepare_and_run_applescript(selected_hosts):
                            stdout=subprocess.PIPE,
                            universal_newlines=True)
     output = osa.communicate(script)[0]
-    print(output)
+    if output:
+        print(output)
 
 
 def split_host_by_prefix_and_suffix(host):
@@ -246,7 +247,7 @@ def main():
         selected_hosts = list(host for host in available_hosts if pat.search(host))
 
         if len(selected_hosts) == 0:
-            print("There are no hosts that match the given filter.")
+            print("No hosts that match the given filter.")
             sys.exit(0)
 
         selected_hosts = sort_hosts(selected_hosts)
