@@ -11,7 +11,7 @@ from math import ceil
 from os.path import expanduser, normpath, join
 
 VERSION_MAJOR = 1
-VERSION_MINOR = 2
+VERSION_MINOR = 3
 VERSION_PATCH = 0
 
 CONFIG_PATH = expanduser("~/.ssh/")
@@ -27,16 +27,34 @@ comma_list_of_indexes = re.compile(r"(?:\d+(?:-\d+)?)(?:,\d+(?:-\d+)?)*")  # e.g
 item_range = re.compile(r"(\d+)-(\d+)")
 
 parser = argparse.ArgumentParser(
-    description="Tool to automatically open several ssh connections in iTerm2 by querying ~/.ssh/config. "
-                "Check https://github.com/luciopaiva/itermoxyl for more details.")
-parser.add_argument("-r", "--run", dest="should_actually_run", action="store_true", default=False,
-                    help="Must pass this to actually run, otherwise will just list matching hosts")
-parser.add_argument("-d", "--debug", action="store_true", default=False,
-                    help="Just dump Applescript, do not execute")
-parser.add_argument("-v", "--version", action="store_true", default=False, help="Just print version and exit")
-parser.add_argument("pattern", nargs='*', help="Regular expression used to filter hosts by name. You can provide "
-                                               "multiple regexps separated by spaces and they will be concatenated "
-                                               "internally using `.*?`.", default=None)
+    description=(
+        "Tool to open multiple SSH connections in iTerm2. Use `--find` to search ~/.ssh/config by regex, or `--list` to specify hosts directly."
+    )
+)
+mode_group = parser.add_mutually_exclusive_group(required=True)
+mode_group.add_argument(
+    "-f", "--find", dest="mode", action="store_const", const="find",
+    help="Search hosts from ssh config using regex patterns"
+)
+mode_group.add_argument(
+    "-l", "--list", dest="mode", action="store_const", const="list",
+    help="Use the following hosts or IPs directly"
+)
+parser.add_argument(
+    "-r", "--run", dest="should_actually_run", action="store_true", default=False,
+    help="Skip confirmation and immediately open panes"
+)
+parser.add_argument(
+    "-d", "--debug", action="store_true", default=False,
+    help="Dump the generated AppleScript and exit"
+)
+parser.add_argument(
+    "-v", "--version", action="store_true", default=False,
+    help="Print version and exit"
+)
+parser.add_argument(
+    "hosts", nargs="*", help="Regex patterns (in find mode) or explicit hosts/IPs (in list mode)"
+)
 arguments = parser.parse_args()
 
 
@@ -237,25 +255,30 @@ def main():
         print("iTerm2 version not supported or not installed")
         sys.exit(1)
 
-    if type(arguments.pattern) is not list or len(arguments.pattern) == 0:
-        parser.print_help()
-        sys.exit(1)
+    if arguments.mode == 'list':
+        if not arguments.hosts:
+            print("No hosts provided for --list mode.")
+            sys.exit(1)
+        selected_hosts = arguments.hosts
+    else:  # find mode
+        if not arguments.hosts:
+            parser.error("At least one regex pattern is required for --find mode.")
 
-    has_list_of_indexes = try_last_term_as_list_of_indexes(arguments.pattern)
-    try_expand_list_of_names(arguments.pattern, has_list_of_indexes)
+        has_list_of_indexes = try_last_term_as_list_of_indexes(arguments.hosts)
+        try_expand_list_of_names(arguments.hosts, has_list_of_indexes)
 
-    loose_search = ".*?".join(["(?:{})".format(p) for p in arguments.pattern])
-    pat = re.compile(loose_search, re.IGNORECASE)
-    available_hosts = load_hosts()
+        loose_search = ".*?".join(["(?:{})".format(p) for p in arguments.hosts])
+        pat = re.compile(loose_search, re.IGNORECASE)
+        available_hosts = load_hosts()
 
-    # get filtered list of hosts, each a tuple (name, address)
-    selected_hosts = list(host for host in available_hosts if pat.search(host))
+        # get filtered list of hosts, each a tuple (name, address)
+        selected_hosts = list(host for host in available_hosts if pat.search(host))
 
-    if len(selected_hosts) == 0:
-        print("There are no hosts that match the given filter.")
-        sys.exit(0)
+        if len(selected_hosts) == 0:
+            print("There are no hosts that match the given filter.")
+            sys.exit(0)
 
-    selected_hosts = sort_hosts(selected_hosts)
+        selected_hosts = sort_hosts(selected_hosts)
 
     print("Will open the following terminal panes:\n")
     for host in selected_hosts:
