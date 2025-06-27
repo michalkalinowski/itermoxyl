@@ -27,7 +27,7 @@ comma_list_of_indexes = re.compile(r"(?:\d+(?:-\d+)?)(?:,\d+(?:-\d+)?)*")  # e.g
 item_range = re.compile(r"(\d+)-(\d+)")
 
 parser = argparse.ArgumentParser(
-    description="Tool to automatically open several ssh connections in iTerm2 by querying ~/.ssh/config. " 
+    description="Tool to automatically open several ssh connections in iTerm2 by querying ~/.ssh/config. "
                 "Check https://github.com/luciopaiva/itermoxyl for more details.")
 parser.add_argument("-r", "--run", dest="should_actually_run", action="store_true", default=False,
                     help="Must pass this to actually run, otherwise will just list matching hosts")
@@ -35,7 +35,7 @@ parser.add_argument("-d", "--debug", action="store_true", default=False,
                     help="Just dump Applescript, do not execute")
 parser.add_argument("-v", "--version", action="store_true", default=False, help="Just print version and exit")
 parser.add_argument("pattern", nargs='*', help="Regular expression used to filter hosts by name. You can provide "
-                                               "multiple regexps separated by spaces and they will be concatenated " 
+                                               "multiple regexps separated by spaces and they will be concatenated "
                                                "internally using `.*?`.", default=None)
 arguments = parser.parse_args()
 
@@ -67,8 +67,8 @@ def load_hosts(config_file_name="config", available_hosts=None):
                         arg = os.path.expanduser(arg)
                     elif not arg.startswith('/'):
                         arg = CONFIG_PATH + arg
-                    for f in list(glob.glob(arg)):
-                        load_hosts(f, available_hosts)
+                    for f_path in list(glob.glob(arg)):
+                        load_hosts(f_path, available_hosts)
 
             # look for `Host` lines
             result = host_re.search(line)
