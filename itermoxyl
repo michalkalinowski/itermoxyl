@@ -71,41 +71,55 @@ if not arguments.mode:
     parser.error("One of --find/-f or --list/-l is required (unless using --version)")
 
 
-def load_hosts(config_file_name="config", available_hosts=None):
-    """ Here we collect all hosts available in ~/.ssh/config.
-    """
-    with open(normpath(join(CONFIG_PATH, expanduser(config_file_name)))) as f:
-        if available_hosts is None:
-            available_hosts = set()
+def load_known_hosts(known_hosts_file='known_hosts'):
+    path = normpath(join(CONFIG_PATH, known_hosts_file))
+    hosts = set()
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                host_field = line.split()[0]
+                for h in host_field.split(','):
+                    if h.startswith('|'):
+                        continue
+                    if h.startswith('[') and ']' in h:
+                        h = h[1:h.index(']')]
+                    hosts.add(h)
+    except FileNotFoundError:
+        pass
+    return hosts
 
-        current_host = None
-        for line in f.readlines():
-            # skip comment lines
-            line = line.strip()
-            if line.startswith("#"):
-                continue
 
-            result = include_re.search(line)
-            if result:
-                for arg in result.group(1).replace('=', ' ').split(' '):
-                    if arg.startswith('~'):
-                        arg = os.path.expanduser(arg)
-                    elif not arg.startswith('/'):
-                        arg = CONFIG_PATH + arg
-                    for f_path in list(glob.glob(arg)):
-                        load_hosts(f_path, available_hosts)
+def load_ssh_config(config_file='config'):
+    path = normpath(join(CONFIG_PATH, config_file))
+    hosts = set()
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                parts = line.split()
+                if parts[0].lower() == 'host' and len(parts) > 1:
+                    for h in parts[1:]:
+                        if any(c in h for c in ['*', '?', '[', ']']):
+                            continue
+                        hosts.add(h)
+    except FileNotFoundError:
+        pass
+    return hosts
 
-            # look for `Host` lines
-            result = host_re.search(line)
-            if result:
-                current_host = result.group(1)
-            elif current_host is not None:
-                # for a host to be selected, it must have a `HostName` property
-                result = hostname_re.search(line)
-                if result:
-                    available_hosts.add(current_host)
 
-        return available_hosts
+def load_hosts():
+    known = load_known_hosts()
+    config = load_ssh_config()
+    combined = known.union(config)
+    if not combined:
+        print("No hosts found in {}known_hosts or {}config".format(CONFIG_PATH, CONFIG_PATH))
+        sys.exit(1)
+    return combined
 
 
 def check_if_iterm_version_is_supported():
@@ -286,7 +300,7 @@ def main():
     for host in selected_hosts:
         print("- {}".format(host))
 
-    if arguments.debug or prompt_for_confirmation(len(selected_hosts)):
+    if arguments.should_actually_run or prompt_for_confirmation(len(selected_hosts)):
         prepare_and_run_applescript(selected_hosts)
 
 
