@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(
         "Tool to open multiple SSH connections in iTerm2. Use `--find` to search ~/.ssh/config by regex, or `--list` to specify hosts directly."
     )
 )
-mode_group = parser.add_mutually_exclusive_group(required=True)
+mode_group = parser.add_mutually_exclusive_group(required=False)
 mode_group.add_argument(
     "-f", "--find", dest="mode", action="store_const", const="find",
     help="Search hosts from ssh config using regex patterns"
@@ -62,6 +62,13 @@ arguments = parser.parse_args()
 def signal_handler(sig, frame):
     # Gracefully exit if Ctrl+C is pressed
     sys.exit(0)
+
+if arguments.version:
+    print("{}.{}.{}".format(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH))
+    sys.exit(0)
+
+if not arguments.mode:
+    parser.error("One of --find/-f or --list/-l is required (unless using --version)")
 
 
 def load_hosts(config_file_name="config", available_hosts=None):
@@ -247,10 +254,6 @@ def try_expand_list_of_names(pattern, look_at_last_term):
 
 
 def main():
-    if arguments.version:
-        print("{}.{}.{}".format(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH))
-        sys.exit(0)
-
     if not check_if_iterm_version_is_supported():
         print("iTerm2 version not supported or not installed")
         sys.exit(1)
@@ -271,7 +274,6 @@ def main():
         pat = re.compile(loose_search, re.IGNORECASE)
         available_hosts = load_hosts()
 
-        # get filtered list of hosts, each a tuple (name, address)
         selected_hosts = list(host for host in available_hosts if pat.search(host))
 
         if len(selected_hosts) == 0:
