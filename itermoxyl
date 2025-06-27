@@ -5,28 +5,20 @@ import re
 import signal
 import subprocess
 import sys
-import glob
-import os
 from math import ceil
 from os.path import expanduser, normpath, join
 
-VERSION_MAJOR = 1
-VERSION_MINOR = 3
-VERSION_PATCH = 0
-
 CONFIG_PATH = expanduser("~/.ssh/")
-
-home = expanduser("~")
 
 parser = argparse.ArgumentParser(
     description=(
-        "Tool to open multiple SSH connections in iTerm2. Use `--find` to search ~/.ssh/config by regex, or `--list` to specify hosts directly."
+        "Tool to open multiple SSH connections in iTerm2. Use `--find` to search ~/.ssh/known_hosts and ~/.ssh/config by regex, or `--list` to specify hosts directly."
     )
 )
 mode_group = parser.add_mutually_exclusive_group(required=False)
 mode_group.add_argument(
     "-f", "--find", dest="mode", action="store_const", const="find",
-    help="Search hosts from ssh config using regex patterns"
+    help="Search hosts from known_hosts and ssh config using regex patterns"
 )
 mode_group.add_argument(
     "-l", "--list", dest="mode", action="store_const", const="list",
@@ -50,13 +42,12 @@ parser.add_argument(
 arguments = parser.parse_args()
 
 
-# noinspection PyUnusedLocal
 def signal_handler(sig, frame):
-    # Gracefully exit if Ctrl+C is pressed
     sys.exit(0)
 
+
 if arguments.version:
-    print(f"{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}")
+    print(f"2.0.0")
     sys.exit(0)
 
 if not arguments.mode:
@@ -128,8 +119,8 @@ def check_if_iterm_version_is_supported():
     return False
 
 
-def prompt_for_confirmation(hosts_count):
-    choice = input(f"\nOpen {hosts_count} panes? [y/N] ").strip().lower()
+def prompt_for_confirmation(count):
+    choice = input(f"\nOpen {count} panes? [y/N] ").strip().lower()
     return choice == 'y'
 
 
@@ -141,9 +132,9 @@ def create_pane(parent, child, orientation):
         """
 
 
-def init_pane(number, host):
+def init_pane(num, host):
     return f"""
-        tell pane_{number}
+        tell pane_{num}
             write text "ssh {host}"
             set name to "{host}"
         end tell
@@ -213,29 +204,31 @@ def main():
         if not arguments.hosts:
             print("No hosts provided for --list mode.")
             sys.exit(1)
-        selected_hosts = arguments.hosts
+        selected = arguments.hosts
     else:  # find mode
         if not arguments.hosts:
             parser.error("At least one regex pattern is required for --find mode.")
-
-        loose_search = ".*?".join([f"(?:{p})" for p in arguments.hosts])
-        pat = re.compile(loose_search, re.IGNORECASE)
-        available_hosts = load_hosts()
-
-        selected_hosts = list(host for host in available_hosts if pat.search(host))
-
-        if len(selected_hosts) == 0:
-            print("No hosts that match the given filter.")
+        loose = ".*?".join(f"(?:{p})" for p in arguments.hosts)
+        pat = re.compile(loose, re.IGNORECASE)
+        all_hosts = load_hosts()
+        selected = [h for h in all_hosts if pat.search(h)]
+        if not selected:
+            print("No hosts match the given pattern.")
             sys.exit(0)
+        selected = sort_hosts(selected)
 
-        selected_hosts = sort_hosts(selected_hosts)
+    print("Will open the following hosts:\n")
+    for h in selected:
+        print(f"- {h}")
 
-    print("Will open the following terminal panes:\n")
-    for host in selected_hosts:
-        print(f"- {host}")
-
-    if arguments.should_actually_run or prompt_for_confirmation(len(selected_hosts)):
-        prepare_and_run_applescript(selected_hosts)
+    # Confirmation / run logic
+    if arguments.should_actually_run:
+        prepare_and_run_applescript(selected)
+    else:
+        if prompt_for_confirmation(len(selected)):
+            prepare_and_run_applescript(selected)
+        else:
+            print("Aborted.")
 
 
 if __name__ == '__main__':
