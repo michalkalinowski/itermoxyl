@@ -17,9 +17,6 @@ VERSION_PATCH = 0
 CONFIG_PATH = expanduser("~/.ssh/")
 
 home = expanduser("~")
-# this regexp will extract a integer suffix, if ones exists, then use
-# the prefix as first sorting field and the suffix and the second one
-host_split = re.compile(r"(\D+(?:\d+\D+)*)(\d+)")
 
 parser = argparse.ArgumentParser(
     description=(
@@ -199,23 +196,14 @@ def prepare_and_run_applescript(hosts):
 
 
 def split_host_by_prefix_and_suffix(host):
-    """ This is a hack to get hosts correctly ordered by number. When ordering, we'd expect "foo1, foo2, ... foo10", but
-        when we order lexicographically, we get "foo1, foo10, foo2, ...". So this method splits the common prefix apart
-        from the number suffix (in case there is one), then order first by the prefix and if there's a draw, order by
-        suffix.
-    """
-    result = host_split.match(host)
-    if result:
-        prefix = result.group(1)
-        suffix = int(result.group(2)) if result.group(2) else 0
-    else:
-        prefix = host
-        suffix = 0
-    return prefix, suffix
+    m = re.match(r"(\D+)(\d+)$", host)
+    if m:
+        return m.group(1), int(m.group(2))
+    return host, 0
 
 
-def sort_hosts(selected_hosts):
-    return sorted(selected_hosts, key=lambda host: split_host_by_prefix_and_suffix(host))
+def sort_hosts(hosts):
+    return sorted(hosts, key=lambda h: split_host_by_prefix_and_suffix(h))
 
 
 def main():
