@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 import argparse
 import re
@@ -43,7 +43,7 @@ arguments = parser.parse_args()
 # noinspection PyUnusedLocal
 def signal_handler(sig, frame):
     # Gracefully exit if Ctrl+C is pressed
-    exit(0)
+    sys.exit(0)
 
 
 def load_hosts(config_file_name="config", available_hosts=None):
@@ -86,10 +86,11 @@ def load_hosts(config_file_name="config", available_hosts=None):
 def check_if_iterm_version_is_supported():
     osa = subprocess.Popen(['osascript', '-'],
                            stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE)
+                           stdout=subprocess.PIPE,
+                           universal_newlines=True)
 
     version_script = 'set iterm_version to (get version of application "iTerm")'
-    version = str(osa.communicate(bytes(version_script))[0]).strip()
+    version = str(osa.communicate(version_script)[0]).strip()
 
     match = re.search(r"^(\d+)\.(\d+)", version)
     if match:
@@ -100,9 +101,9 @@ def check_if_iterm_version_is_supported():
 
 
 def prompt_for_confirmation(hosts_count):
-    print("\nNumber of panes to open: %d" % hosts_count)
+    print("\nNumber of panes to open: {}".format(hosts_count))
     sys.stdout.write("Press 'y' to continue (or any other key to abort): ")
-    choice = raw_input().strip().lower()
+    choice = input().strip().lower()
     return choice == "y"
 
 
@@ -118,7 +119,7 @@ def init_pane(number, host):
     return """
         tell pane_{number}
             write text "ssh {host}"
-            set name to "${host}"
+            set name to "{host}"
         end tell
         """.format(number=number, host=host)
 
@@ -160,12 +161,13 @@ def prepare_and_run_applescript(selected_hosts):
 
     if arguments.debug:
         print(script)
-        exit(0)
+        sys.exit(0)
 
     osa = subprocess.Popen(['osascript', '-'],
                            stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE)
-    output = osa.communicate(bytes(script))[0]
+                           stdout=subprocess.PIPE,
+                           universal_newlines=True)
+    output = osa.communicate(script)[0]
     print(output)
 
 
@@ -203,7 +205,7 @@ def try_last_term_as_list_of_indexes(pattern):
                     range_end = int(range_result.group(2))
                     if range_begin > range_end:
                         print("Range '{}' is invalid".format(item))
-                        exit(1)
+                        sys.exit(1)
                     for i in range(range_begin, range_end + 1):
                         expanded_list.append(str(i))
                 else:
@@ -229,15 +231,15 @@ def try_expand_list_of_names(pattern, look_at_last_term):
 def main():
     if arguments.version:
         print("{}.{}.{}".format(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH))
-        exit(0)
+        sys.exit(0)
 
     if not check_if_iterm_version_is_supported():
         print("iTerm2 version not supported or not installed")
-        exit(1)
+        sys.exit(1)
 
     if type(arguments.pattern) is not list or len(arguments.pattern) == 0:
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
     has_list_of_indexes = try_last_term_as_list_of_indexes(arguments.pattern)
     try_expand_list_of_names(arguments.pattern, has_list_of_indexes)
@@ -251,17 +253,18 @@ def main():
 
     if len(selected_hosts) == 0:
         print("There are no hosts that match the given filter.")
-        exit(0)
+        sys.exit(0)
 
     selected_hosts = sort_hosts(selected_hosts)
 
     print("Will open the following terminal panes:\n")
     for host in selected_hosts:
-        print("- %s" % host)
+        print("- {}".format(host))
 
     if arguments.debug or prompt_for_confirmation(len(selected_hosts)):
         prepare_and_run_applescript(selected_hosts)
 
 
-signal.signal(signal.SIGINT, signal_handler)
-main()
+if __name__ == '__main__':
+    signal.signal(signal.SIGINT, signal_handler)
+    main()
