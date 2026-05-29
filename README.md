@@ -11,20 +11,21 @@ This is a modernized and actively maintained fork of the original **[iTermoxyl b
 The original project appears to be unmaintained, having not seen updates for several years. This fork aims to carry the torch forward. It is more than just a simple update; it's a significant evolution of the original concept, which justifies the major version bump to **2.x.x**.
 
 Key improvements include:
-* A complete port to **Python 3**, ensuring compatibility with modern macOS systems where Python 2.7 is no longer standard.
-* A redesigned Command-Line Interface (CLI) with two distinct, powerful modes: **`--find`** for regex searching and **`--list`** for explicit hosts.
-* A simplified and more robust host discovery mechanism that now includes `~/.ssh/known_hosts`.
+
+- A complete port to **Python 3**, ensuring compatibility with modern macOS systems where Python 2.7 is no longer standard.
+- A redesigned Command-Line Interface (CLI) with two distinct, powerful modes: **`--find`** for regex searching and **`--list`** for explicit hosts.
+- A simplified and more robust host discovery mechanism that now includes `~/.ssh/known_hosts`.
 
 iTermoxyl is designed to be simple to use, with minimal interaction needed to get it running. Once ssh connections are established, use iTerm2's broadcast input feature to send commands to all machines at once (`Shell -> Broadcast input` or simply `cmd+alt+i`).
 
 ## Features
 
-* **Zero Configuration:** Magically learns about existing hosts by reading from `~/.ssh/config` and `~/.ssh/known_hosts`.
-* **No YAML required:** Unlike tools like `itermocil` or `i2cssh`, you don't need to manually create descriptions of your environments.
-* **Two Powerful Modes:**
-    * **Find Mode:** Search for hosts using one or more regular expression patterns.
-    * **List Mode:** Connect to an explicit, space-separated list of hosts.
-* **Loose Matching:** In find mode, patterns are loosely joined, allowing you to quickly filter for hosts without typing full names.
+- **Zero Configuration:** Magically learns about existing hosts by reading from `~/.ssh/config` and `~/.ssh/known_hosts`.
+- **No YAML required:** Unlike tools like `itermocil` or `i2cssh`, you don't need to manually create descriptions of your environments.
+- **Two Powerful Modes:**
+  - **Find Mode:** Search for hosts using one or more regular expression patterns.
+  - **List Mode:** Connect to an explicit, space-separated list of hosts.
+- **Loose Matching:** In find mode, patterns are loosely joined, allowing you to quickly filter for hosts without typing full names.
 
 ## How to install
 
@@ -41,15 +42,15 @@ iTermoxyl works in one of two modes: **find** or **list**.
 
 Consider your `~/.ssh/config` and `~/.ssh/known_hosts` files contain entries for the following hosts:
 
-* `foo-1`
-* `foo-2`
-* `foo-3`
-* `bar-1`
-* `bar-2`
-* `server-1-a`
-* `server-1-b`
-* `server-2-a`
-* `server-2-b`
+- `foo-1`
+- `foo-2`
+- `foo-3`
+- `bar-1`
+- `bar-2`
+- `server-1-a`
+- `server-1-b`
+- `server-2-a`
+- `server-2-b`
 
 ### Find mode (`-f`, `--find`)
 

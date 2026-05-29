@@ -17,27 +17,43 @@ parser = argparse.ArgumentParser(
 )
 mode_group = parser.add_mutually_exclusive_group(required=False)
 mode_group.add_argument(
-    "-f", "--find", dest="mode", action="store_const", const="find",
-    help="Search hosts from known_hosts and ssh config using regex patterns"
+    "-f",
+    "--find",
+    dest="mode",
+    action="store_const",
+    const="find",
+    help="Search hosts from known_hosts and ssh config using regex patterns",
 )
 mode_group.add_argument(
-    "-l", "--list", dest="mode", action="store_const", const="list",
-    help="Use the following hosts or IPs directly"
+    "-l",
+    "--list",
+    dest="mode",
+    action="store_const",
+    const="list",
+    help="Use the following hosts or IPs directly",
 )
 parser.add_argument(
-    "-r", "--run", dest="should_actually_run", action="store_true", default=False,
-    help="Skip confirmation and immediately open panes"
+    "-r",
+    "--run",
+    dest="should_actually_run",
+    action="store_true",
+    default=False,
+    help="Skip confirmation and immediately open panes",
 )
 parser.add_argument(
-    "-d", "--debug", action="store_true", default=False,
-    help="Dump the generated AppleScript and exit"
+    "-d",
+    "--debug",
+    action="store_true",
+    default=False,
+    help="Dump the generated AppleScript and exit",
 )
 parser.add_argument(
-    "-v", "--version", action="store_true", default=False,
-    help="Print version and exit"
+    "-v", "--version", action="store_true", default=False, help="Print version and exit"
 )
 parser.add_argument(
-    "hosts", nargs="*", help="Regex patterns (in find mode) or explicit hosts/IPs (in list mode)"
+    "hosts",
+    nargs="*",
+    help="Regex patterns (in find mode) or explicit hosts/IPs (in list mode)",
 )
 arguments = parser.parse_args()
 
@@ -47,47 +63,47 @@ def signal_handler(sig, frame):
 
 
 if arguments.version:
-    print(f"2.0.0")
+    print("2.0.0")
     sys.exit(0)
 
 if not arguments.mode:
     parser.error("One of --find/-f or --list/-l is required (unless using --version)")
 
 
-def load_known_hosts(known_hosts_file='known_hosts'):
+def load_known_hosts(known_hosts_file="known_hosts"):
     path = normpath(join(CONFIG_PATH, known_hosts_file))
     hosts = set()
     try:
         with open(path) as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
                 host_field = line.split()[0]
-                for h in host_field.split(','):
-                    if h.startswith('|'):
+                for h in host_field.split(","):
+                    if h.startswith("|"):
                         continue
-                    if h.startswith('[') and ']' in h:
-                        h = h[1:h.index(']')]
+                    if h.startswith("[") and "]" in h:
+                        h = h[1 : h.index("]")]
                     hosts.add(h)
     except FileNotFoundError:
         pass
     return hosts
 
 
-def load_ssh_config(config_file='config'):
+def load_ssh_config(config_file="config"):
     path = normpath(join(CONFIG_PATH, config_file))
     hosts = set()
     try:
         with open(path) as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
                 parts = line.split()
-                if parts[0].lower() == 'host' and len(parts) > 1:
+                if parts[0].lower() == "host" and len(parts) > 1:
                     for h in parts[1:]:
-                        if any(c in h for c in ['*', '?', '[', ']']):
+                        if any(c in h for c in ["*", "?", "[", "]"]):
                             continue
                         hosts.add(h)
     except FileNotFoundError:
@@ -107,8 +123,10 @@ def load_hosts():
 
 def check_if_iterm_version_is_supported():
     process = subprocess.Popen(
-        ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        universal_newlines=True
+        ["osascript", "-"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
     )
     version_script = 'set iterm_version to (get version of application "iTerm")'
     version = process.communicate(version_script)[0].strip()
@@ -121,7 +139,7 @@ def check_if_iterm_version_is_supported():
 
 def prompt_for_confirmation(count):
     choice = input(f"\nOpen {count} panes? [y/N] ").strip().lower()
-    return choice == 'y'
+    return choice == "y"
 
 
 def create_pane(parent, child, orientation):
@@ -155,7 +173,7 @@ def prepare_and_run_applescript(hosts):
         p = i * 2 + 1
         pane_creation += create_pane(p, p + 1, "vertical")
 
-    init_script = ''.join(init_pane(i + 1, h) for i, h in enumerate(hosts))
+    init_script = "".join(init_pane(i + 1, h) for i, h in enumerate(hosts))
 
     script = f"""
         tell application "iTerm"
@@ -176,8 +194,10 @@ def prepare_and_run_applescript(hosts):
         sys.exit(0)
 
     process = subprocess.Popen(
-        ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        universal_newlines=True
+        ["osascript", "-"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
     )
     output = process.communicate(script)[0]
     if output:
@@ -200,7 +220,7 @@ def main():
         print("iTerm2 version not supported or not installed")
         sys.exit(1)
 
-    if arguments.mode == 'list':
+    if arguments.mode == "list":
         if not arguments.hosts:
             print("No hosts provided for --list mode.")
             sys.exit(1)
@@ -231,6 +251,6 @@ def main():
             print("Aborted.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     main()
