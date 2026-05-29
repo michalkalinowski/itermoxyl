@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT="$(dirname "$0")/itermoxyl"
+pass=0
+fail=0
+
+# Count panes and rows from --debug AppleScript output to derive actual columns×rows.
+# Uses horizontal split count for rows and unique pane variable count for total panes.
+layout() {
+    local out="$1"
+    local h_splits n_panes rows cols
+    h_splits=$(echo "$out" | grep -c "split horizontally" || true)
+    n_panes=$(echo "$out" | grep -oE 'set pane_[0-9]+ to' | sort -u | wc -l | tr -d ' ')
+    rows=$((h_splits + 1))
+    cols=$(((n_panes + rows - 1) / rows))
+    echo "${cols}x${rows}"
+}
+
+check() {
+    local desc="$1" want_cols="$2" want_rows="$3"
+    shift 3
+    local out got
+    out=$(python3 "$SCRIPT" "$@" --debug 2>&1)
+    got=$(layout "$out")
+    local want="${want_cols}x${want_rows}"
+    if [[ "$got" == "$want" ]]; then
+        echo "  PASS  $desc → $got"
+        pass=$((pass + 1))
+    else
+        echo "  FAIL  $desc → got $got, want $want"
+        fail=$((fail + 1))
+    fi
+}
+
+check_error() {
+    local desc="$1" snippet="$2"
+    shift 2
+    local out
+    out=$(python3 "$SCRIPT" "$@" 2>&1 || true)
+    if echo "$out" | grep -q "$snippet"; then
+        echo "  PASS  $desc (error contains: $snippet)"
+        pass=$((pass + 1))
+    else
+        echo "  FAIL  $desc — expected '$snippet' in: $out"
+        fail=$((fail + 1))
+    fi
+}
+
+echo "=== README list mode example ==="
+check "foo-1 foo-3 bar-2 (3 hosts)" 2 2 -l foo-1 foo-3 bar-2
+
+echo ""
+echo "=== Adaptive default layout ==="
+check "n=1" 1 1 -l h1
+check "n=2" 1 2 -l h1 h2
+check "n=3" 2 2 -l h1 h2 h3
+check "n=4" 2 2 -l h1 h2 h3 h4
+check "n=5" 2 3 -l h1 h2 h3 h4 h5
+check "n=6" 2 3 -l h1 h2 h3 h4 h5 h6
+check "n=7 (sparse-row fix → 2×4, not 3×3)" 2 4 -l h1 h2 h3 h4 h5 h6 h7
+check "n=8" 3 3 -l h1 h2 h3 h4 h5 h6 h7 h8
+check "n=9" 3 3 -l h1 h2 h3 h4 h5 h6 h7 h8 h9
+check "n=16" 4 4 -l $(seq -f 'h%.0f' 1 16)
+check "n=20" 4 5 -l $(seq -f 'h%.0f' 1 20)
+
+echo ""
+echo "=== --columns override ==="
+check "--columns 3, n=6" 3 2 -l h1 h2 h3 h4 h5 h6 --columns 3
+check "--columns 1, n=4 (stacked)" 1 4 -l h1 h2 h3 h4 --columns 1
+check "--columns 5, n=3 (clamp)" 3 1 -l h1 h2 h3 --columns 5
+
+echo ""
+echo "=== --rows override ==="
+check "--rows 1, n=4 (side by side)" 4 1 -l h1 h2 h3 h4 --rows 1
+check "--rows 2, n=6" 3 2 -l h1 h2 h3 h4 h5 h6 --rows 2
+check "--rows 3, n=9" 3 3 -l $(seq -f 'h%.0f' 1 9) --rows 3
+
+echo ""
+echo "=== Error cases ==="
+check_error "--columns 0 rejected" "must be >= 1" -l h1 h2 --columns 0
+check_error "--rows 0 rejected" "must be >= 1" -l h1 h2 --rows 0
+check_error "--columns and --rows are mutually exclusive" "not allowed with" -l h1 h2 --columns 2 --rows 2
+check_error "no mode flag" "required" h1 h2
+check_error "invalid hostname" "unsafe" -l "host;rm -rf /"
+
+echo ""
+echo "=== $pass passed, $fail failed ==="
+[[ $fail -eq 0 ]]
