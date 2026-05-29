@@ -204,6 +204,16 @@ def prepare_and_run_applescript(hosts):
         print(output)
 
 
+_SAFE_HOST_RE = re.compile(r"^[A-Za-z0-9._:\-\[\]]+$")
+
+
+def validate_hosts(hosts):
+    for h in hosts:
+        if not _SAFE_HOST_RE.match(h):
+            print(f"Invalid hostname (unsafe characters): {h}", file=sys.stderr)
+            sys.exit(1)
+
+
 def split_host_by_prefix_and_suffix(host):
     m = re.match(r"(\D+)(\d+)$", host)
     if m:
@@ -240,6 +250,8 @@ def main():
     print("Will open the following hosts:\n")
     for h in selected:
         print(f"- {h}")
+
+    validate_hosts(selected)
 
     # Confirmation / run logic
     if arguments.should_actually_run:
