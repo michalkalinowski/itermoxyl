@@ -82,7 +82,7 @@ def signal_handler(sig, frame):
 
 
 if arguments.version:
-    print("2.0.0")
+    print("2.1.0")
     sys.exit(0)
 
 if not arguments.mode:
