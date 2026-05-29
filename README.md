@@ -90,3 +90,11 @@ When you provide multiple patterns in find mode, they are joined together to for
 This allows you to quickly filter hosts that match a sequence of patterns, regardless of what comes between them.
 
 The script will always show all hosts matching your query and ask for confirmation before connecting to them (unless you use the `-r` or `--run` flag).
+
+## Additional options
+
+| Flag | Description |
+|------|-------------|
+| `-r`, `--run` | Skip the confirmation prompt and open panes immediately. |
+| `-d`, `--debug` | Print the generated AppleScript to stdout and exit without opening any panes. Useful for troubleshooting. |
+| `-v`, `--version` | Print the version and exit. |
