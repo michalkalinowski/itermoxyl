@@ -126,6 +126,7 @@ def check_if_iterm_version_is_supported():
         ["osascript", "-"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
         universal_newlines=True,
     )
     version_script = 'set iterm_version to (get version of application "iTerm")'
@@ -197,11 +198,15 @@ def prepare_and_run_applescript(hosts):
         ["osascript", "-"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         universal_newlines=True,
     )
-    output = process.communicate(script)[0]
-    if output:
-        print(output)
+    stdout, stderr = process.communicate(script)
+    if process.returncode != 0:
+        print(f"AppleScript error:\n{stderr.strip()}", file=sys.stderr)
+        sys.exit(1)
+    if stdout:
+        print(stdout)
 
 
 _SAFE_HOST_RE = re.compile(r"^[A-Za-z0-9._:\-\[\]]+$")
