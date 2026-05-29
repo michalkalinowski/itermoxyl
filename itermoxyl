@@ -160,7 +160,7 @@ def init_pane(num, host):
         """
 
 
-def prepare_and_run_applescript(hosts):
+def build_applescript(hosts):
     n = len(hosts)
     vertical_splits = int(ceil(n / 2.0)) - 1
     second_columns = n // 2
@@ -176,7 +176,7 @@ def prepare_and_run_applescript(hosts):
 
     init_script = "".join(init_pane(i + 1, h) for i, h in enumerate(hosts))
 
-    script = f"""
+    return f"""
         tell application "iTerm"
             activate
             tell current window
@@ -190,10 +190,8 @@ def prepare_and_run_applescript(hosts):
         end tell
         """
 
-    if arguments.debug:
-        print(script)
-        sys.exit(0)
 
+def run_applescript(script):
     process = subprocess.Popen(
         ["osascript", "-"],
         stdin=subprocess.PIPE,
@@ -258,12 +256,17 @@ def main():
 
     validate_hosts(selected)
 
+    script = build_applescript(selected)
+    if arguments.debug:
+        print(script)
+        return
+
     # Confirmation / run logic
     if arguments.should_actually_run:
-        prepare_and_run_applescript(selected)
+        run_applescript(script)
     else:
         if prompt_for_confirmation(len(selected)):
-            prepare_and_run_applescript(selected)
+            run_applescript(script)
         else:
             print("Aborted.")
 
