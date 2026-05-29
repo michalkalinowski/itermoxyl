@@ -5,7 +5,7 @@ import re
 import signal
 import subprocess
 import sys
-from math import ceil
+from math import ceil, sqrt
 from os.path import expanduser, normpath, join
 
 CONFIG_PATH = expanduser("~/.ssh/")
@@ -49,6 +49,25 @@ parser.add_argument(
 )
 parser.add_argument(
     "-v", "--version", action="store_true", default=False, help="Print version and exit"
+)
+layout_group = parser.add_mutually_exclusive_group()
+layout_group.add_argument(
+    "-C",
+    "--columns",
+    dest="columns",
+    type=int,
+    default=None,
+    metavar="N",
+    help="Number of columns (rows grow as needed); default is adaptive based on host count",
+)
+layout_group.add_argument(
+    "-R",
+    "--rows",
+    dest="rows",
+    type=int,
+    default=None,
+    metavar="N",
+    help="Number of rows (columns grow as needed)",
 )
 parser.add_argument(
     "hosts",
@@ -160,19 +179,33 @@ def init_pane(num, host):
         """
 
 
-def build_applescript(hosts):
+def _default_columns(n):
+    columns = round(sqrt(n))
+    columns = max(1, columns)
+    last_row_panes = n % columns or columns
+    if last_row_panes < columns / 2:
+        columns -= 1
+    return max(1, columns)
+
+
+def build_applescript(hosts, columns=None):
     n = len(hosts)
-    vertical_splits = int(ceil(n / 2.0)) - 1
-    second_columns = n // 2
+    num_cols = min(columns if columns is not None else _default_columns(n), n)
+    num_rows = int(ceil(n / num_cols))
     pane_creation = ""
 
-    for i in range(vertical_splits):
-        p = i * 2 + 1
-        pane_creation += create_pane(p, p + 2, "horizontal")
+    for row in range(1, num_rows):
+        parent = 1 + (row - 1) * num_cols
+        child = parent + num_cols
+        pane_creation += create_pane(parent, child, "horizontal")
 
-    for i in range(second_columns):
-        p = i * 2 + 1
-        pane_creation += create_pane(p, p + 1, "vertical")
+    for row in range(num_rows):
+        row_start = 1 + row * num_cols
+        panes_in_row = min(num_cols, n - row * num_cols)
+        for col in range(1, panes_in_row):
+            parent = row_start + col - 1
+            child = parent + 1
+            pane_creation += create_pane(parent, child, "vertical")
 
     init_script = "".join(init_pane(i + 1, h) for i, h in enumerate(hosts))
 
@@ -256,7 +289,19 @@ def main():
 
     validate_hosts(selected)
 
-    script = build_applescript(selected)
+    if arguments.columns is not None and arguments.columns < 1:
+        parser.error("--columns must be >= 1")
+    if arguments.rows is not None and arguments.rows < 1:
+        parser.error("--rows must be >= 1")
+
+    if arguments.rows is not None:
+        columns = int(ceil(len(selected) / arguments.rows))
+    elif arguments.columns is not None:
+        columns = arguments.columns
+    else:
+        columns = None  # build_applescript will compute the default
+
+    script = build_applescript(selected, columns=columns)
     if arguments.debug:
         print(script)
         return
