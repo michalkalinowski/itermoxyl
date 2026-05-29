@@ -18,21 +18,12 @@ Key improvements include:
 
 iTermoxyl is designed to be simple to use, with minimal interaction needed to get it running. Once ssh connections are established, use iTerm2's broadcast input feature to send commands to all machines at once (`Shell -> Broadcast input` or simply `cmd+alt+i`).
 
-## Features
-
-- **Zero Configuration:** Magically learns about existing hosts by reading from `~/.ssh/config` and `~/.ssh/known_hosts`.
-- **No YAML required:** Unlike tools like `itermocil` or `i2cssh`, you don't need to manually create descriptions of your environments.
-- **Two Powerful Modes:**
-  - **Find Mode:** Search for hosts using one or more regular expression patterns.
-  - **List Mode:** Connect to an explicit, space-separated list of hosts.
-- **Loose Matching:** In find mode, patterns are loosely joined, allowing you to quickly filter for hosts without typing full names.
-
 ## How to install
 
 `cd` to a directory in your `$PATH` and run:
 
     curl -O https://raw.githubusercontent.com/luciopaiva/itermoxyl/master/itermoxyl
-    chmod u+x itermoxyl
+    chmod +x itermoxyl
 
 The script requires **Python 3**.
 
@@ -40,28 +31,17 @@ The script requires **Python 3**.
 
 iTermoxyl works in one of two modes: **find** or **list**.
 
-Consider your `~/.ssh/config` and `~/.ssh/known_hosts` files contain entries for the following hosts:
-
-- `foo-1`
-- `foo-2`
-- `foo-3`
-- `bar-1`
-- `bar-2`
-- `server-1-a`
-- `server-1-b`
-- `server-2-a`
-- `server-2-b`
-
 ### Find mode (`-f`, `--find`)
 
-Find mode searches all discovered hosts using regular expressions.
+Searches hosts discovered from `~/.ssh/config` and `~/.ssh/known_hosts` using regex. Multiple terms are matched loosely in sequence — useful for quickly narrowing down a group of machines without typing full names.
+
+Consider your SSH files contain entries for: `foo-1`, `foo-2`, `foo-3`, `bar-1`, `bar-2`, `server-1-a`, `server-1-b`, `server-2-a`, `server-2-b`.
 
 1.  **Open all `foo` machines:**
 
         itermoxyl -f foo
 
-2.  **Open `server-1-a` and `server-2-a`:**
-    The terms `server` and `a` are joined into a loose regex, finding hosts that contain both strings.
+2.  **Open `server-1-a` and `server-2-a`** (hosts containing both `server` and `a`, in that order):
 
         itermoxyl -f server a
 
@@ -71,30 +51,34 @@ Find mode searches all discovered hosts using regular expressions.
 
 ### List mode (`-l`, `--list`)
 
-List mode connects to the exact hosts you provide, in the order you provide them.
+Connects to the exact hosts you provide, in the order you provide them. No host discovery — you name them explicitly.
 
 1.  **Open `foo-1`, `foo-3`, and `bar-2`:**
 
         itermoxyl -l foo-1 foo-3 bar-2
 
-## Find mode logic
-
-When you provide multiple patterns in find mode, they are joined together to form a single "loose" regular expression. For example, the command:
-
-    itermoxyl -f TERM_A TERM_B
-
-...is translated into the following regular expression:
-
-    (?:TERM_A).*?(?:TERM_B)
-
-This allows you to quickly filter hosts that match a sequence of patterns, regardless of what comes between them.
-
-The script will always show all hosts matching your query and ask for confirmation before connecting to them (unless you use the `-r` or `--run` flag).
-
 ## Additional options
 
-| Flag | Description |
-|------|-------------|
-| `-r`, `--run` | Skip the confirmation prompt and open panes immediately. |
-| `-d`, `--debug` | Print the generated AppleScript to stdout and exit without opening any panes. Useful for troubleshooting. |
-| `-v`, `--version` | Print the version and exit. |
+| Flag                  | Description                                                                                               |
+| --------------------- | --------------------------------------------------------------------------------------------------------- |
+| `-C N`, `--columns N` | Fix the number of columns; rows grow as needed. Mutually exclusive with `--rows`.                         |
+| `-R N`, `--rows N`    | Fix the number of rows; columns grow as needed. Mutually exclusive with `--columns`.                      |
+| `-r`, `--run`         | Skip the confirmation prompt and open panes immediately.                                                  |
+| `-d`, `--debug`       | Print the generated AppleScript to stdout and exit without opening any panes. Useful for troubleshooting. |
+| `-v`, `--version`     | Print the version and exit.                                                                               |
+
+### Layout
+
+By default, iTermoxyl picks a grid shape automatically based on the number of hosts, aiming for a near-square layout that makes good use of the screen:
+
+| Hosts | Columns × Rows |
+| ----- | -------------- |
+| 2     | 1 × 2          |
+| 3–4   | 2 × 2          |
+| 5–6   | 2 × 3          |
+| 7     | 2 × 4          |
+| 8–9   | 3 × 3          |
+| 16    | 4 × 4          |
+| 20    | 4 × 5          |
+
+Use `--columns` or `--rows` to override — for example, `--columns 3` on an ultra-wide monitor, or `--rows 1` to open everything side by side.
