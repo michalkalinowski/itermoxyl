@@ -22,7 +22,7 @@ iTermoxyl is designed to be simple to use, with minimal interaction needed to ge
 
 `cd` to a directory in your `$PATH` and run:
 
-    curl -O https://raw.githubusercontent.com/luciopaiva/itermoxyl/master/itermoxyl
+    curl -O https://raw.githubusercontent.com/michalkalinowski/itermoxyl/master/itermoxyl
     chmod +x itermoxyl
 
 The script requires **Python 3**.
